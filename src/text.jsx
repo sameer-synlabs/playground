@@ -13,38 +13,49 @@ import {
 import { UploadOutlined } from "@ant-design/icons";
 import { useForm, useWatch } from "antd/es/form/Form";
 import { IMAGE_GENERATION } from "./api/apiService";
+import axios from "axios";
 
 const { Item } = Form;
 
 const App = () => {
   const [generatedImage, setGeneratedImage] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [form] = useForm();
 
   const propmtStrength = useWatch("prompt_strength", form);
   const guidanceScale = useWatch("guidance_scale", form);
-  const numInferenceSteps = useWatch("num_inference_steps", form);
 
-  const handleImageGeneration = async () => {
-    const newTab = window.open(
-      "https://cors-anywhere.herokuapp.com/corsdemo",
-      "_blank"
-    );
+  const handleImageUpload = async (file) => {
+    if (!file) return;
 
-    if (newTab) {
-      newTab.addEventListener("load", () => {
-        const newWindowDocument = newTab.document;
-        const submitInput = newWindowDocument.querySelector(
-          'input[type="submit"]'
-        );
-        if (submitInput) {
-          submitInput.click();
-          setTimeout(() => {
-            newTab.close();
-          }, 2000);
-        }
-      });
+    setImageUploading(true);
+
+    if (file) {
+      const payload = {
+        image: file.fileList[0]?.originFileObj,
+        key: "43a14f236551a5788da36e73b500f7df",
+      };
+
+      try {
+        const res = await axios({
+          method: "POST",
+          url: "https://api.imgbb.com/1/upload",
+          data: payload,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        setImageUrl(res.data.data.url);
+        setImageUploading(false);
+      } catch (error) {
+        console.log(error);
+        setImageUploading(false);
+        message.error("Failed to upload image");
+      }
     }
   };
 
@@ -71,7 +82,7 @@ const App = () => {
 
         const payload = {
           ...values,
-          image: imageDataUrl,
+          image: imageUrl,
         };
 
         const res = await IMAGE_GENERATION.generateImage(payload);
@@ -123,6 +134,9 @@ const App = () => {
               }}
               listType="picture"
               accept="image/*"
+              onChange={(file) => {
+                handleImageUpload(file);
+              }}
             >
               <Button icon={<UploadOutlined />} block>
                 Upload
@@ -175,10 +189,15 @@ const App = () => {
               <Slider min={1} max={500} />
             </Item>
 
-            <Tag>{numInferenceSteps}</Tag>
+            <Tag>{guidanceScale}</Tag>
           </div>
 
-          <Button block loading={loading} type="primary" htmlType="submit">
+          <Button
+            block
+            loading={loading || imageUploading}
+            type="primary"
+            htmlType="submit"
+          >
             {loading ? "Generating Image" : "Generate Image"}
           </Button>
         </Form>
