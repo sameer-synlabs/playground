@@ -58,8 +58,9 @@ const App = () => {
     handleImageGeneration();
 
     form.setFieldsValue({
-      prompt_strength: 1,
-      guidance_scale: 1,
+      prompt_strength: 0.7,
+      guidance_scale: 15,
+      num_inference_steps: 50,
     });
   }, []);
 
@@ -77,12 +78,8 @@ const App = () => {
         let imageDataUrl = reader.result;
 
         const payload = {
-          input: {
-            ...values,
-            image: imageDataUrl,
-            num_inference_steps: 50,
-            seed: 0,
-          },
+          ...values,
+          image: imageDataUrl,
         };
 
         const res = await IMAGE_GENERATION.generateImage(payload);
@@ -159,7 +156,7 @@ const App = () => {
               name="prompt_strength"
               className="w-full"
             >
-              <Slider min={1} max={10} />
+              <Slider min={0} max={1} step={0.1} />
             </Item>
 
             <Tag>{propmtStrength}</Tag>
@@ -171,7 +168,19 @@ const App = () => {
               name="guidance_scale"
               className="w-full"
             >
-              <Slider min={1} max={10} />
+              <Slider min={1} max={50} />
+            </Item>
+
+            <Tag>{guidanceScale}</Tag>
+          </div>
+
+          <div className="flex items-center w-full gap-2">
+            <Item
+              label="Number of inference steps"
+              name="num_inference_steps"
+              className="w-full"
+            >
+              <Slider min={1} max={500} />
             </Item>
 
             <Tag>{guidanceScale}</Tag>
@@ -202,7 +211,7 @@ const App = () => {
               e.target.src =
                 "https://t4.ftcdn.net/jpg/02/51/95/53/360_F_251955356_FAQH0U1y1TZw3ZcdPGybwUkH90a3VAhb.jpg";
             }}
-            className="w-full h-full"
+            className="w-full"
           />
         ) : (
           <p className="flex items-center justify-center w-full h-full">
