@@ -10,7 +10,7 @@ import {
   Image,
   Tag,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, EyeOutlined } from "@ant-design/icons";
 import { useForm, useWatch } from "antd/es/form/Form";
 import { IMAGE_GENERATION } from "./api/apiService";
 
@@ -26,28 +26,6 @@ const App = () => {
   const guidanceScale = useWatch("guidance_scale", form);
   const numInferenceSteps = useWatch("num_inference_steps", form);
 
-  const handleImageGeneration = async () => {
-    const newTab = window.open(
-      "https://cors-anywhere.herokuapp.com/corsdemo",
-      "_blank"
-    );
-
-    if (newTab) {
-      newTab.addEventListener("load", () => {
-        const newWindowDocument = newTab.document;
-        const submitInput = newWindowDocument.querySelector(
-          'input[type="submit"]'
-        );
-        if (submitInput) {
-          submitInput.click();
-          setTimeout(() => {
-            newTab.close();
-          }, 2000);
-        }
-      });
-    }
-  };
-
   useEffect(() => {
     form.setFieldsValue({
       prompt_strength: 0.7,
@@ -56,12 +34,41 @@ const App = () => {
     });
   }, []);
 
+  const onPreview = async (file) => {
+    let src = file.url;
+
+    if (!src && file.originFileObj instanceof Blob) {
+      src = URL.createObjectURL(file.originFileObj);
+    }
+
+    if (file.type === "application/pdf") {
+      window.open(src, "_blank");
+    } else if (file.type.startsWith("image/")) {
+      const imgWindow = window.open("", "_blank");
+      imgWindow?.document.write(`<img src="${src}" />`);
+    } else {
+      message.info("The selected file format cannot be previewed.");
+    }
+  };
+
+  const resetFields = () => {
+    form.setFieldsValue({
+      image: undefined,
+      prompt: undefined,
+      prompt_strength: 0.7,
+      guidance_scale: 15,
+      num_inference_steps: 50,
+    });
+
+    setGeneratedImage(null);
+  };
+
   const onFinish = (values) => {
     const { image } = values;
 
     const reader = new FileReader();
 
-    reader.readAsDataURL(image[0].originFileObj);
+    reader.readAsDataURL(image.fileList[0].originFileObj);
 
     reader.onload = async function () {
       setLoading(true);
@@ -89,20 +96,13 @@ const App = () => {
     };
   };
 
-  const normFile = (e) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
-
   return (
-    <div className="flex items-start min-h-screen gap-4">
+    <div className="grid h-full grid-cols-2 gap-4">
       <Card
         title="Image Generation Details"
         size="default"
         type="inner"
-        className="w-1/2 h-full drop-shadow-md"
+        className="w-full h-full drop-shadow-md"
         styles={{
           header: {
             backgroundColor: "#f0f0f0",
@@ -113,16 +113,16 @@ const App = () => {
           <Item
             label="Image"
             name="image"
-            valuePropName="fileList"
-            getValueFromEvent={normFile}
             rules={[{ required: true, message: "Please upload an image" }]}
           >
             <Upload
-              beforeUpload={() => {
+              beforeUpload={(file) => {
                 return false;
               }}
+              maxCount={1}
               listType="picture"
               accept="image/*"
+              onPreview={onPreview}
             >
               <Button icon={<UploadOutlined />} block>
                 Upload
@@ -178,9 +178,20 @@ const App = () => {
             <Tag>{numInferenceSteps}</Tag>
           </div>
 
-          <Button block loading={loading} type="primary" htmlType="submit">
-            {loading ? "Generating Image" : "Generate Image"}
-          </Button>
+          {!generatedImage ? (
+            <Button block loading={loading} type="primary" htmlType="submit">
+              {loading ? "Generating Image" : "Generate Image"}
+            </Button>
+          ) : (
+            <Button
+              block
+              onClick={resetFields}
+              type="primary"
+              htmlType="button"
+            >
+              Regenerate
+            </Button>
+          )}
         </Form>
       </Card>
 
@@ -188,7 +199,7 @@ const App = () => {
         title="Generated Image"
         size="default"
         type="inner"
-        className="w-1/2 h-full drop-shadow-md"
+        className="w-full h-full drop-shadow-md"
         styles={{
           header: {
             backgroundColor: "#f0f0f0",
@@ -205,7 +216,7 @@ const App = () => {
             className="w-full"
           />
         ) : (
-          <p className="flex items-center justify-center">
+          <p className="flex items-center justify-center w-full h-full">
             {loading ? "Generating..." : "Fill details to generate image"}
           </p>
         )}

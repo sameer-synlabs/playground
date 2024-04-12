@@ -4,9 +4,9 @@
 
 body {
   padding: 16px;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .ant-card-body {
-  height: 100%;
+  height: 93%;
 }
