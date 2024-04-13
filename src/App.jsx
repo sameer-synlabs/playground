@@ -17,7 +17,9 @@ import { IMAGE_GENERATION } from "./api/apiService";
 const { Item } = Form;
 
 const App = () => {
+  const [uploadedImage, setUploadedImage] = useState(null);
   const [generatedImage, setGeneratedImage] = useState(null);
+  const [fileList, setFileList] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [form] = useForm();
@@ -60,7 +62,13 @@ const App = () => {
       num_inference_steps: 50,
     });
 
+    setUploadedImage(null);
     setGeneratedImage(null);
+    setFileList([]);
+  };
+
+  const onFileChange = ({ fileList: newFileList }) => {
+    setFileList(newFileList);
   };
 
   const onFinish = (values) => {
@@ -81,6 +89,8 @@ const App = () => {
           image: imageDataUrl,
         };
 
+        setUploadedImage(imageDataUrl);
+
         const res = await IMAGE_GENERATION.generateImage(payload);
 
         setGeneratedImage(res?.data?.output);
@@ -97,9 +107,9 @@ const App = () => {
   };
 
   return (
-    <div className="grid h-full grid-cols-2 gap-4">
+    <div className="grid h-full gap-4 lg:grid-cols-2">
       <Card
-        title="Image Generation Details"
+        title="Input"
         size="default"
         type="inner"
         className="w-full h-full drop-shadow-md"
@@ -116,13 +126,16 @@ const App = () => {
             rules={[{ required: true, message: "Please upload an image" }]}
           >
             <Upload
+              fileList={fileList}
+              maxCount={1}
+              accept="image/*"
+              onRemove={() => {
+                setFileList([]);
+              }}
               beforeUpload={(file) => {
+                setFileList([file]);
                 return false;
               }}
-              maxCount={1}
-              listType="picture"
-              accept="image/*"
-              onPreview={onPreview}
             >
               <Button icon={<UploadOutlined />} block>
                 Upload
@@ -178,25 +191,32 @@ const App = () => {
             <Tag>{numInferenceSteps}</Tag>
           </div>
 
-          {!generatedImage ? (
-            <Button block loading={loading} type="primary" htmlType="submit">
+          <div className="flex items-center w-full gap-2">
+            <Button
+              className="w-full"
+              loading={loading}
+              type="primary"
+              htmlType="submit"
+            >
               {loading ? "Generating Image" : "Generate Image"}
             </Button>
-          ) : (
-            <Button
-              block
-              onClick={resetFields}
-              type="primary"
-              htmlType="button"
-            >
-              Regenerate
-            </Button>
-          )}
+
+            {generatedImage && (
+              <Button
+                className="w-full"
+                onClick={resetFields}
+                type="default"
+                htmlType="button"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </Form>
       </Card>
 
       <Card
-        title="Generated Image"
+        title="Output"
         size="default"
         type="inner"
         className="w-full h-full drop-shadow-md"
@@ -207,14 +227,33 @@ const App = () => {
         }}
       >
         {generatedImage ? (
-          <Image
-            src={generatedImage}
-            onError={(e) => {
-              e.target.src =
-                "https://t4.ftcdn.net/jpg/02/51/95/53/360_F_251955356_FAQH0U1y1TZw3ZcdPGybwUkH90a3VAhb.jpg";
-            }}
-            className="w-full"
-          />
+          <>
+            <div>
+              <p className="mb-1 font-semibold">Uploaded Image:</p>
+
+              <Image
+                src={uploadedImage}
+                onError={(e) => {
+                  e.target.src =
+                    "https://t4.ftcdn.net/jpg/02/51/95/53/360_F_251955356_FAQH0U1y1TZw3ZcdPGybwUkH90a3VAhb.jpg";
+                }}
+                className="w-full"
+              />
+            </div>
+
+            <div className="mt-4">
+              <p className="mb-1 font-semibold">Generated Image:</p>
+
+              <Image
+                src={generatedImage}
+                onError={(e) => {
+                  e.target.src =
+                    "https://t4.ftcdn.net/jpg/02/51/95/53/360_F_251955356_FAQH0U1y1TZw3ZcdPGybwUkH90a3VAhb.jpg";
+                }}
+                className="w-full"
+              />
+            </div>
+          </>
         ) : (
           <p className="flex items-center justify-center w-full h-full">
             {loading ? "Generating..." : "Fill details to generate image"}
